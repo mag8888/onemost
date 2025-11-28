@@ -1,4 +1,4 @@
-# Настройка MLM сервера $20 на Railway (ветка 3/20)
+# Настройка MLM сервера $30 на Railway (ветка 3/20)
 
 ## Важно: Root Directory
 
@@ -19,10 +19,10 @@ DATABASE_PUBLIC_URL=<скопируйте из центрального серв
 CORE_API_URL=https://onemost-production.up.railway.app/api
 CORE_API_KEY=<скопируйте MLM_SERVER_20_API_KEY из центрального сервера>
 
-# MLM Settings (для программы $20)
-MLM_PARTNER_PRICE=20.0
-MLM_YELLOW_BONUS=10.0
-MLM_GREEN_BONUS=10.0
+# MLM Settings (для программы $30)
+MLM_PARTNER_PRICE=30.0
+MLM_YELLOW_BONUS=15.0
+MLM_GREEN_BONUS=15.0
 SERVER_ID=mlm_server_20
 ```
 
@@ -53,12 +53,12 @@ Railway автоматически использует `nixpacks.toml`:
 
 ## Что исправлено (из опыта 3/100)
 
-✅ **Модуль shared** - скопирован внутрь `mlm_server_20/`
-✅ **nixpacks.toml** - создан для явной конфигурации сборки
-✅ **PostgreSQL поддержка** - добавлена в `settings.py`
-✅ **Миграции** - созданы для приложения `mlm`
-✅ **railway.json** - обновлен для правильной работы
-✅ **requirements.txt** - добавлены `psycopg2-binary` и `dj-database-url`
+- ✅ **Модуль shared** - скопирован внутрь `mlm_server_20/`
+- ✅ **nixpacks.toml** - создан для явной конфигурации сборки
+- ✅ **PostgreSQL поддержка** - добавлена в `settings.py`
+- ✅ **Миграции** - созданы для приложения `mlm`
+- ✅ **railway.json** - обновлен для правильной работы
+- ✅ **requirements.txt** - добавлены `psycopg2-binary` и `dj-database-url`
 
 ## Проверка
 

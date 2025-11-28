@@ -100,7 +100,7 @@ class MLMService:
                 mlm_server_id=self.server_id
             )
             
-            # Новая логика: при оплате $20 начисляем желтый ($10) и зеленый ($10) бонусы рефереру
+            # Новая логика: при оплате $30 начисляем желтый ($15) и зеленый ($15) бонусы рефереру
             if node.referrer_id:
                 self._calculate_yellow_and_green_bonuses(node.referrer_id, user_id)
             
@@ -113,12 +113,12 @@ class MLMService:
             return {'success': False, 'error': str(e)}
     
     def _calculate_yellow_and_green_bonuses(self, referrer_id: int, new_partner_id: int):
-        """Рассчитать желтый и зеленый бонусы при регистрации нового партнера ($20)"""
+        """Рассчитать желтый и зеленый бонусы при регистрации нового партнера ($30)"""
         referrer_node = MLMNode.objects.filter(user_id=referrer_id).first()
         if not referrer_node:
             return
         
-        # Желтый бонус - $10 рефереру
+        # Желтый бонус - $15 рефереру
         yellow_bonus = Bonus.objects.create(
             user_id=referrer_id,
             referrer_id=new_partner_id,
@@ -127,7 +127,7 @@ class MLMService:
             description=f'Желтый бонус за регистрацию партнера (${settings.MLM_YELLOW_BONUS})'
         )
         
-        # Зеленый бонус - $10 рефереру
+        # Зеленый бонус - $15 рефереру
         green_bonus = Bonus.objects.create(
             user_id=referrer_id,
             referrer_id=new_partner_id,
