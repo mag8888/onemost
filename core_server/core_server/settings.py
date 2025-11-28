@@ -67,10 +67,23 @@ WSGI_APPLICATION = 'core_server.wsgi.application'
 # Database
 # Поддержка DATABASE_URL для Railway
 import dj_database_url
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Используем DATABASE_URL (внутренний для сервисов в одном проекте)
 # или DATABASE_PUBLIC_URL (публичный для сервисов в разных проектах)
 database_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
+
+# Логирование для отладки
+if database_url:
+    logger.info(f"DATABASE_URL found: {database_url[:50]}...")  # Показываем только первые 50 символов
+else:
+    logger.warning("DATABASE_URL not found! Using fallback configuration.")
+    logger.warning("Available env vars: DATABASE_URL={}, DATABASE_PUBLIC_URL={}".format(
+        'SET' if os.getenv('DATABASE_URL') else 'NOT SET',
+        'SET' if os.getenv('DATABASE_PUBLIC_URL') else 'NOT SET'
+    ))
 
 # В Railway сервисы в одном проекте должны использовать DATABASE_URL с .railway.internal
 # Это работает автоматически через Reference
@@ -78,15 +91,31 @@ database_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
 # Принудительно используем dj_database_url для Railway
 if database_url:
     # Railway предоставляет DATABASE_URL или DATABASE_PUBLIC_URL
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=database_url,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
+    try:
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=database_url,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
+        }
+        logger.info(f"Database configured successfully. Host: {DATABASES['default'].get('HOST', 'unknown')}")
+    except Exception as e:
+        logger.error(f"Error configuring database from DATABASE_URL: {e}")
+        # Fallback на отдельные переменные
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.getenv('DATABASE_NAME', 'core_db'),
+                'USER': os.getenv('DATABASE_USER', 'postgres'),
+                'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres'),
+                'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+                'PORT': os.getenv('DATABASE_PORT', '5432'),
+            }
+        }
 else:
     # Fallback на отдельные переменные (для локальной разработки)
+    logger.warning("Using fallback database configuration (localhost)")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -162,5 +191,39 @@ TELEGRAM_WEBAPP_URL = os.getenv('TELEGRAM_WEBAPP_URL', '')
 MLM_SERVER_API_KEYS = {
     'mlm_server_1': os.getenv('MLM_SERVER_1_API_KEY', ''),
     'mlm_server_2': os.getenv('MLM_SERVER_2_API_KEY', ''),
+}
+
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core_server': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
 
