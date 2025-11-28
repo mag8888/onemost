@@ -3,6 +3,8 @@ Telegram бот для центрального сервера
 """
 import os
 import logging
+import secrets
+import string
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.error import Conflict, NetworkError, TimedOut
@@ -118,7 +120,8 @@ class TelegramBot:
         
         # Нижнее меню (ReplyKeyboardMarkup)
         menu_keyboard = [
-            [KeyboardButton("💰 Баланс"), KeyboardButton("📋 Каталог программ")]
+            [KeyboardButton("💰 Баланс"), KeyboardButton("📋 Каталог программ")],
+            [KeyboardButton("🔗 Реф программа")]
         ]
         reply_markup = ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True)
         
@@ -193,13 +196,20 @@ class TelegramBot:
             def get_referral_link():
                 try:
                     user = User.objects.get(telegram_id=update.effective_user.id)
-                    referral_link, _ = ReferralLink.objects.get_or_create(
+                    referral_link, created = ReferralLink.objects.get_or_create(
                         user=user,
-                        mlm_server_id='mlm_server_1'
+                        mlm_server_id='mlm_server_1',
+                        defaults={'referral_code': ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}
                     )
+                    if created or not referral_link.referral_code:
+                        referral_link.referral_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+                        referral_link.save()
                     return f"🔗 Ваша реферальная ссылка:\n{referral_link.referral_code}"
                 except User.DoesNotExist:
                     return "Пользователь не найден."
+                except Exception as e:
+                    logger.error(f"Error getting referral link: {e}")
+                    return f"Ошибка: {str(e)}"
             
             message = await get_referral_link()
         
@@ -210,10 +220,15 @@ class TelegramBot:
                 try:
                     user = User.objects.get(telegram_id=update.effective_user.id)
                     # Получаем или создаем реферальную ссылку для программы $20
-                    referral_link, _ = ReferralLink.objects.get_or_create(
+                    referral_link, created = ReferralLink.objects.get_or_create(
                         user=user,
-                        mlm_server_id='mlm_server_20'
+                        mlm_server_id='mlm_server_20',
+                        defaults={'referral_code': ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}
                     )
+                    # Если ссылка уже существовала, но без referral_code, генерируем его
+                    if not referral_link.referral_code:
+                        referral_link.referral_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+                        referral_link.save()
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
                     # Используем username из Telegram, если есть, иначе используем telegram_id
                     telegram_user = update.effective_user
@@ -251,10 +266,15 @@ class TelegramBot:
                 try:
                     user = User.objects.get(telegram_id=update.effective_user.id)
                     # Получаем или создаем реферальную ссылку для программы $100
-                    referral_link, _ = ReferralLink.objects.get_or_create(
+                    referral_link, created = ReferralLink.objects.get_or_create(
                         user=user,
-                        mlm_server_id='mlm_server_1'
+                        mlm_server_id='mlm_server_1',
+                        defaults={'referral_code': ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}
                     )
+                    # Если ссылка уже существовала, но без referral_code, генерируем его
+                    if not referral_link.referral_code:
+                        referral_link.referral_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+                        referral_link.save()
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
                     # Используем username из Telegram, если есть, иначе используем telegram_id
                     telegram_user = update.effective_user
@@ -321,6 +341,18 @@ class TelegramBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(
                 "📋 Выберите реферальную программу:",
+                reply_markup=reply_markup
+            )
+        
+        elif text == "🔗 Реф программа":
+            # Показываем меню выбора реферальной программы
+            keyboard = [
+                [InlineKeyboardButton("💵 Программа $20", callback_data='program_20')],
+                [InlineKeyboardButton("💵 Программа $100", callback_data='program_100')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "🔗 Выберите реферальную программу для получения ссылки:",
                 reply_markup=reply_markup
             )
         
