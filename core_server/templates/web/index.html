@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Server - Главная</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Core Server</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/admin/">Админ-панель</a>
+                <a class="nav-link" href="/dashboard/">Дашборд</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Центральный сервер MLM системы</h1>
+                <p class="lead">Управление пользователями, балансом и кошельком</p>
+                
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">👥 Пользователи</h5>
+                                <p class="card-text">Управление пользователями системы</p>
+                                <a href="/admin/users/user/" class="btn btn-primary">Управление</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">💰 Кошелек</h5>
+                                <p class="card-text">Управление балансами и транзакциями</p>
+                                <a href="/admin/wallet/wallet/" class="btn btn-primary">Управление</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">🔗 Рефералы</h5>
+                                <p class="card-text">Реферальные связи и ссылки</p>
+                                <a href="/admin/users/referralrelation/" class="btn btn-primary">Управление</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

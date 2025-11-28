@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL для Core Server
+  core_db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: core_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - core_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - onemost_network
+
+  # Центральный сервер
+  core_server:
+    build:
+      context: ./core_server
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./core_server:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://postgres:postgres@core_db:5432/core_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - core_db
+      - redis
+    networks:
+      - onemost_network
+
+  # Redis для кеширования и очередей
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - onemost_network
+
+  # MLM Server 1
+  mlm_server_1:
+    build:
+      context: ./mlm_server
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8001
+    volumes:
+      - ./mlm_server:/app
+    ports:
+      - "8001:8001"
+    environment:
+      - DEBUG=True
+      - CORE_API_URL=http://core_server:8000/api
+      - CORE_API_KEY=${MLM_SERVER_1_API_KEY}
+      - SERVER_ID=mlm_server_1
+    depends_on:
+      - core_server
+    networks:
+      - onemost_network
+
+  # MLM Server 2
+  mlm_server_2:
+    build:
+      context: ./mlm_server
+      dockerfile: Dockerfile
+    command: python manage.py runserver 0.0.0.0:8002
+    volumes:
+      - ./mlm_server:/app
+    ports:
+      - "8002:8002"
+    environment:
+      - DEBUG=True
+      - CORE_API_URL=http://core_server:8000/api
+      - CORE_API_KEY=${MLM_SERVER_2_API_KEY}
+      - SERVER_ID=mlm_server_2
+    depends_on:
+      - core_server
+    networks:
+      - onemost_network
+
+volumes:
+  core_db_data:
+
+networks:
+  onemost_network:
+    driver: bridge
+
