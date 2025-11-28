@@ -20,6 +20,6 @@ RUN python manage.py collectstatic --noinput || true
 # Порт
 EXPOSE 8000
 
-# Команда запуска
+# Команда запуска (по умолчанию веб-сервер, переопределяется в Railway для бота)
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
