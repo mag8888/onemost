@@ -7,8 +7,19 @@ from pathlib import Path
 
 # Добавляем shared в путь
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Пытаемся найти shared на уровень выше (если Root Directory = mlm_server)
 SHARED_DIR = BASE_DIR.parent / 'shared'
-sys.path.insert(0, str(SHARED_DIR))
+# Если не найден, пытаемся найти в текущей директории (если Root Directory = корень проекта)
+if not SHARED_DIR.exists():
+    SHARED_DIR = BASE_DIR / 'shared'
+# Если все еще не найден, пытаемся найти в родительской директории от BASE_DIR
+if not SHARED_DIR.exists():
+    SHARED_DIR = BASE_DIR.parent.parent / 'shared'
+if SHARED_DIR.exists():
+    sys.path.insert(0, str(SHARED_DIR))
+else:
+    # Если shared не найден, пытаемся добавить родительскую директорию
+    sys.path.insert(0, str(BASE_DIR.parent))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mlm-server-key')

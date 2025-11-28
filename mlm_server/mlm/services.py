@@ -6,8 +6,17 @@ from pathlib import Path
 
 # Добавляем shared в путь
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Пытаемся найти shared в разных местах
 SHARED_DIR = BASE_DIR / 'shared'
-sys.path.insert(0, str(SHARED_DIR))
+if not SHARED_DIR.exists():
+    SHARED_DIR = BASE_DIR.parent / 'shared'
+if not SHARED_DIR.exists():
+    SHARED_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'shared'
+if SHARED_DIR.exists():
+    sys.path.insert(0, str(SHARED_DIR))
+else:
+    # Если shared не найден, добавляем родительскую директорию
+    sys.path.insert(0, str(BASE_DIR))
 
 from shared.api_client import CoreAPIClient
 from django.conf import settings
