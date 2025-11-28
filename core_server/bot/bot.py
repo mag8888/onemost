@@ -70,9 +70,28 @@ class TelegramBot:
         
         # Обработка реферальной ссылки (если есть параметр start)
         if context.args and len(context.args) > 0:
-            referrer_username = context.args[0]
+            referrer_identifier = context.args[0]  # Может быть username или telegram_id
             # Здесь можно добавить логику обработки реферала
-            logger.info(f"User {user.id} came from referral: {referrer_username}")
+            logger.info(f"User {user.id} came from referral: {referrer_identifier}")
+            
+            # Пытаемся найти реферера по username или telegram_id
+            @sync_to_async
+            def find_referrer():
+                try:
+                    # Сначала пытаемся найти по username
+                    referrer = User.objects.filter(username=referrer_identifier).first()
+                    # Если не нашли, пытаемся найти по telegram_id (если передан ID)
+                    if not referrer and referrer_identifier.isdigit():
+                        referrer = User.objects.filter(telegram_id=int(referrer_identifier)).first()
+                    return referrer
+                except Exception as e:
+                    logger.error(f"Error finding referrer: {e}")
+                    return None
+            
+            referrer = await find_referrer()
+            if referrer:
+                logger.info(f"Found referrer: {referrer.id} for new user {user.id}")
+                # Здесь можно добавить логику создания реферальной связи
         
         # Создаем или получаем пользователя (асинхронно)
         @sync_to_async
@@ -198,7 +217,7 @@ class TelegramBot:
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
                     # Используем username из Telegram, если есть, иначе используем telegram_id
                     telegram_user = update.effective_user
-                    username = telegram_user.username or f"user_{user.id}"
+                    username = telegram_user.username or str(user.telegram_id)
                     bot_link = f"https://t.me/onemost_bot?start={username}"
                     logger.info(f"Generated referral link for user {user.id} (program $20): {bot_link}")
                     message_text = (
@@ -239,7 +258,7 @@ class TelegramBot:
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
                     # Используем username из Telegram, если есть, иначе используем telegram_id
                     telegram_user = update.effective_user
-                    username = telegram_user.username or f"user_{user.id}"
+                    username = telegram_user.username or str(user.telegram_id)
                     bot_link = f"https://t.me/onemost_bot?start={username}"
                     logger.info(f"Generated referral link for user {user.id} (program $100): {bot_link}")
                     message_text = (
