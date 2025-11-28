@@ -75,21 +75,42 @@ WSGI_APPLICATION = 'mlm_server.wsgi.application'
 # Database
 # Поддержка DATABASE_URL для Railway
 import dj_database_url
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Используем DATABASE_PUBLIC_URL (публичный для сервисов в разных проектах)
 database_url = os.getenv('DATABASE_PUBLIC_URL') or os.getenv('DATABASE_URL')
 
+# Логирование для отладки
+if database_url:
+    logger.info(f"Database URL found: {database_url[:50]}...")  # Показываем только первые 50 символов
+else:
+    logger.warning("DATABASE_PUBLIC_URL and DATABASE_URL not found! Using SQLite fallback.")
+
 if database_url:
     # Railway предоставляет DATABASE_PUBLIC_URL или DATABASE_URL
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=database_url,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
+    try:
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=database_url,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
+        }
+        logger.info(f"Database configured successfully. Host: {DATABASES['default'].get('HOST', 'unknown')}")
+    except Exception as e:
+        logger.error(f"Error configuring database from DATABASE_URL: {e}")
+        # Fallback на SQLite
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
     # Fallback на SQLite для локальной разработки
+    logger.warning("Using SQLite database for local development")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
