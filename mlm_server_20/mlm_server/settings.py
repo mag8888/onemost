@@ -5,26 +5,11 @@ import os
 import sys
 from pathlib import Path
 
-# Добавляем shared в путь
+# BASE_DIR уже определен в __init__.py, но определяем здесь для совместимости
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# shared теперь скопирован внутрь mlm_server_20, поэтому ищем его там
-# Добавляем все возможные пути в sys.path (без проверки существования)
-# Python сам проверит при импорте
-paths_to_add = [
-    str(BASE_DIR / 'shared'),  # Если shared скопирован в mlm_server_20 (текущий случай)
-    str(BASE_DIR.parent / 'shared'),  # Если Root Directory = корень проекта
-    '/app/shared',  # Railway: если Root Directory = mlm_server_20
-    '/app/../shared',  # Railway: если Root Directory = корень
-    str(BASE_DIR),  # Текущая директория
-    str(BASE_DIR.parent),  # Родительская директория
-    '/app',  # Railway root
-]
-
-# Добавляем пути в sys.path
-for path_str in paths_to_add:
-    if path_str not in sys.path:
-        sys.path.insert(0, path_str)
+# Пути к shared уже добавлены в mlm_server/__init__.py
+# Здесь можно добавить дополнительные пути, если нужно
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mlm-server-key')
