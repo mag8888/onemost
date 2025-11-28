@@ -67,24 +67,13 @@ WSGI_APPLICATION = 'core_server.wsgi.application'
 # Database
 # Поддержка DATABASE_URL для Railway
 import dj_database_url
-import re
 
-# Используем DATABASE_PUBLIC_URL (публичный) или DATABASE_URL (внутренний)
-# DATABASE_PUBLIC_URL работает из любого сервиса, DATABASE_URL только внутри проекта
-database_url = os.getenv('DATABASE_PUBLIC_URL') or os.getenv('DATABASE_URL')
+# Используем DATABASE_URL (внутренний для сервисов в одном проекте)
+# или DATABASE_PUBLIC_URL (публичный для сервисов в разных проектах)
+database_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
 
-# Если DATABASE_URL содержит .railway.internal, заменяем на публичный URL
-if database_url:
-    if '.railway.internal' in database_url:
-        # Пытаемся получить публичный URL
-        public_url = os.getenv('DATABASE_PUBLIC_URL')
-        if public_url:
-            database_url = public_url
-        else:
-            # Заменяем .railway.internal на .railway.app (публичный домен)
-            database_url = database_url.replace('.railway.internal', '.railway.app')
-            # Также заменяем в других местах URL
-            database_url = re.sub(r'@([^:]+)\.railway\.internal', r'@\1.railway.app', database_url)
+# В Railway сервисы в одном проекте должны использовать DATABASE_URL с .railway.internal
+# Это работает автоматически через Reference
 
 # Принудительно используем dj_database_url для Railway
 if database_url:
