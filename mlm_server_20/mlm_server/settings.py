@@ -18,20 +18,36 @@ possible_paths = [
 ]
 
 # Добавляем все возможные пути в sys.path
+shared_found = False
 for shared_path in possible_paths:
-    if shared_path.exists() and shared_path.is_dir():
-        shared_str = str(shared_path.resolve())
-        if shared_str not in sys.path:
-            sys.path.insert(0, shared_str)
-            break
+    try:
+        if shared_path.exists() and shared_path.is_dir():
+            shared_str = str(shared_path.resolve())
+            if shared_str not in sys.path:
+                sys.path.insert(0, shared_str)
+                shared_found = True
+                break
+    except Exception:
+        pass
+    
     # Также добавляем родительскую директорию для поиска
-    parent = shared_path.parent
-    if parent.exists() and str(parent.resolve()) not in sys.path:
-        sys.path.insert(0, str(parent.resolve()))
+    try:
+        parent = shared_path.parent
+        if parent.exists() and str(parent.resolve()) not in sys.path:
+            sys.path.insert(0, str(parent.resolve()))
+    except Exception:
+        pass
 
-# Если все еще не найден, добавляем текущую директорию
-if str(BASE_DIR.resolve()) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR.resolve()))
+# Если все еще не найден, добавляем текущую директорию и родительскую
+if not shared_found:
+    if str(BASE_DIR.resolve()) not in sys.path:
+        sys.path.insert(0, str(BASE_DIR.resolve()))
+    try:
+        parent_dir = str(BASE_DIR.parent.resolve())
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+    except Exception:
+        pass
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mlm-server-key')
