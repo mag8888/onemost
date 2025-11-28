@@ -117,44 +117,30 @@ class MLMService:
         referrer_node = MLMNode.objects.filter(user_id=referrer_id).first()
         if not referrer_node:
             return
-        
-        # Желтый бонус - $15 рефереру
-        yellow_bonus = Bonus.objects.create(
-            user_id=referrer_id,
-            referrer_id=new_partner_id,
-            bonus_type='yellow',
-            amount=Decimal(settings.MLM_YELLOW_BONUS),
-            description=f'Желтый бонус за регистрацию партнера (${settings.MLM_YELLOW_BONUS})'
-        )
-        
-        # Зеленый бонус - $15 рефереру
+
+        green_recipient = referrer_id
+        yellow_recipient = referrer_node.referrer_id or referrer_id
+
         green_bonus = Bonus.objects.create(
-            user_id=referrer_id,
+            user_id=green_recipient,
             referrer_id=new_partner_id,
             bonus_type='green',
             amount=Decimal(settings.MLM_GREEN_BONUS),
             description=f'Зеленый бонус за регистрацию партнера (${settings.MLM_GREEN_BONUS})'
         )
-        
-        # Отправляем желтый бонус в Core
+
+        yellow_bonus = Bonus.objects.create(
+            user_id=yellow_recipient,
+            referrer_id=new_partner_id,
+            bonus_type='yellow',
+            amount=Decimal(settings.MLM_YELLOW_BONUS),
+            description=f'Желтый бонус за регистрацию партнера (${settings.MLM_YELLOW_BONUS})'
+        )
+
+        # Зеленый бонус (пригласителю)
         try:
             self.core_client.add_balance(
-                user_id=referrer_id,
-                amount=float(yellow_bonus.amount),
-                description=yellow_bonus.description,
-                transaction_type='mlm_bonus'
-            )
-            yellow_bonus.status = 'sent'
-            yellow_bonus.save()
-        except Exception as e:
-            logger.error(f"Error sending yellow bonus to Core: {e}")
-            yellow_bonus.status = 'failed'
-            yellow_bonus.save()
-        
-        # Отправляем зеленый бонус в Core
-        try:
-            self.core_client.add_balance(
-                user_id=referrer_id,
+                user_id=green_recipient,
                 amount=float(green_bonus.amount),
                 description=green_bonus.description,
                 transaction_type='mlm_bonus'
@@ -165,6 +151,21 @@ class MLMService:
             logger.error(f"Error sending green bonus to Core: {e}")
             green_bonus.status = 'failed'
             green_bonus.save()
+
+        # Желтый бонус (структурному куратору)
+        try:
+            self.core_client.add_balance(
+                user_id=yellow_recipient,
+                amount=float(yellow_bonus.amount),
+                description=yellow_bonus.description,
+                transaction_type='mlm_bonus'
+            )
+            yellow_bonus.status = 'sent'
+            yellow_bonus.save()
+        except Exception as e:
+            logger.error(f"Error sending yellow bonus to Core: {e}")
+            yellow_bonus.status = 'failed'
+            yellow_bonus.save()
     
     def _calculate_green_bonuses(self, referrer_id: int, new_partner_id: int):
         """Рассчитать зеленые бонусы"""

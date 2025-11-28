@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Структуры участников</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Core Server</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/admin/">Админ-панель</a>
+                <a class="nav-link" href="/structures/">Структуры</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3">Структуры всех участников</h1>
+            <a href="/" class="btn btn-outline-secondary btn-sm">← На главную</a>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Всего пользователей: {{ users|length }}</h5>
+                <p class="mb-0">Отображаются все связи из таблицы ReferralRelation по каждому MLM серверу.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>MLM сервер</th>
+                        <th>Партнер</th>
+                        <th>Пригласил</th>
+                        <th>Уровень</th>
+                        <th>Дата создания</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for relation in relations %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ relation.mlm_server_id }}</td>
+                        <td>{{ relation.user.username }} (ID: {{ relation.user.telegram_id }})</td>
+                        <td>
+                            {% if relation.referrer %}
+                                {{ relation.referrer.username }} (ID: {{ relation.referrer.telegram_id }})
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>{{ relation.level }}</td>
+                        <td>{{ relation.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">Связей пока нет.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

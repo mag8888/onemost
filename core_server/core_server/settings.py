@@ -167,3 +167,22 @@ MLM_SERVER_API_KEYS = {
     'mlm_server_2': os.getenv('MLM_SERVER_2_API_KEY', ''),
 }
 
+# MLM Program configuration (Telegram bot + purchases)
+MLM_PROGRAM_30_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_30_DESCRIPTION',
+    'Стартовая программа $30: быстрый вход в систему, доступ к базовой образовательной воронке и автоматическая активация структуры.'
+)
+MLM_PROGRAM_30_UPGRADE_URL = os.getenv('MLM_PROGRAM_30_UPGRADE_URL', '')
+
+MLM_PROGRAM_100_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_100_DESCRIPTION',
+    'Программа $100: полный набор уроков, закрытое комьюнити и бонусная матрица с выплатами $100/$50/$50.'
+)
+MLM_PROGRAM_100_UPGRADE_URL = os.getenv('MLM_PROGRAM_100_UPGRADE_URL', '')
+
+MLM_PROGRAM_1000_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_1000_DESCRIPTION',
+    'Программа $1000: премиальное наставничество, офлайн-сессии и максимальные бонусы $1000/$500/$500.'
+)
+MLM_PROGRAM_1000_UPGRADE_URL = os.getenv('MLM_PROGRAM_1000_UPGRADE_URL', '')
+
