@@ -67,55 +67,23 @@ WSGI_APPLICATION = 'core_server.wsgi.application'
 # Database
 # Поддержка DATABASE_URL для Railway
 import dj_database_url
-import logging
 
-logger = logging.getLogger(__name__)
-
-# Используем DATABASE_URL (внутренний для сервисов в одном проекте)
-# или DATABASE_PUBLIC_URL (публичный для сервисов в разных проектах)
+# Используем DATABASE_URL если доступен, иначе DATABASE_PUBLIC_URL, иначе отдельные переменные
 database_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
-
-# Логирование для отладки
-if database_url:
-    logger.info(f"DATABASE_URL found: {database_url[:50]}...")  # Показываем только первые 50 символов
-else:
-    logger.warning("DATABASE_URL not found! Using fallback configuration.")
-    logger.warning("Available env vars: DATABASE_URL={}, DATABASE_PUBLIC_URL={}".format(
-        'SET' if os.getenv('DATABASE_URL') else 'NOT SET',
-        'SET' if os.getenv('DATABASE_PUBLIC_URL') else 'NOT SET'
-    ))
-
-# В Railway сервисы в одном проекте должны использовать DATABASE_URL с .railway.internal
-# Это работает автоматически через Reference
 
 # Принудительно используем dj_database_url для Railway
 if database_url:
-    # Railway предоставляет DATABASE_URL или DATABASE_PUBLIC_URL
-    try:
-        DATABASES = {
-            'default': dj_database_url.config(
-                default=database_url,
-                conn_max_age=600,
-                conn_health_checks=True,
-            )
-        }
-        logger.info(f"Database configured successfully. Host: {DATABASES['default'].get('HOST', 'unknown')}")
-    except Exception as e:
-        logger.error(f"Error configuring database from DATABASE_URL: {e}")
-        # Fallback на отдельные переменные
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': os.getenv('DATABASE_NAME', 'core_db'),
-                'USER': os.getenv('DATABASE_USER', 'postgres'),
-                'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres'),
-                'HOST': os.getenv('DATABASE_HOST', 'localhost'),
-                'PORT': os.getenv('DATABASE_PORT', '5432'),
-            }
-        }
+    # Railway предоставляет DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 else:
     # Fallback на отдельные переменные (для локальной разработки)
-    logger.warning("Using fallback database configuration (localhost)")
+    # НО если в Railway, то DATABASE_URL должен быть всегда
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -126,6 +94,12 @@ else:
             'PORT': os.getenv('DATABASE_PORT', '5432'),
         }
     }
+    
+    # В Railway DATABASE_URL должен быть всегда установлен
+    # Если его нет, выводим предупреждение
+    if os.getenv('RAILWAY_ENVIRONMENT'):
+        import warnings
+        warnings.warn('DATABASE_URL not found in Railway environment!')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -190,40 +164,26 @@ TELEGRAM_WEBAPP_URL = os.getenv('TELEGRAM_WEBAPP_URL', '')
 # MLM Servers API Keys
 MLM_SERVER_API_KEYS = {
     'mlm_server_1': os.getenv('MLM_SERVER_1_API_KEY', ''),
-    'mlm_server_2': os.getenv('MLM_SERVER_2_API_KEY', ''),
+    'mlm_server_20': os.getenv('MLM_SERVER_20_API_KEY', ''),
+    'mlm_server_1000': os.getenv('MLM_SERVER_1000_API_KEY', ''),
 }
 
-# Logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'core_server': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
+# MLM Program configuration (Telegram bot + purchases)
+MLM_PROGRAM_30_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_30_DESCRIPTION',
+    'Стартовая программа $30: быстрый вход в систему, доступ к базовой образовательной воронке и автоматическая активация структуры.'
+)
+MLM_PROGRAM_30_UPGRADE_URL = os.getenv('MLM_PROGRAM_30_UPGRADE_URL', '')
+
+MLM_PROGRAM_100_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_100_DESCRIPTION',
+    'Программа $100: полный набор уроков, закрытое комьюнити и бонусная матрица с выплатами $100/$50/$50.'
+)
+MLM_PROGRAM_100_UPGRADE_URL = os.getenv('MLM_PROGRAM_100_UPGRADE_URL', '')
+
+MLM_PROGRAM_1000_DESCRIPTION = os.getenv(
+    'MLM_PROGRAM_1000_DESCRIPTION',
+    'Программа $1000: премиальное наставничество, офлайн-сессии и максимальные бонусы $1000/$500/$500.'
+)
+MLM_PROGRAM_1000_UPGRADE_URL = os.getenv('MLM_PROGRAM_1000_UPGRADE_URL', '')
 

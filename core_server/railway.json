@@ -5,10 +5,9 @@
     "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic --noinput"
   },
   "deploy": {
-    "preDeployCommand": "python manage.py migrate",
-    "startCommand": "bash start.sh",
+    "startCommand": "python manage.py migrate && python manage.py run_telegram_bot",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
-  },
-  "comment": "Universal start script that detects service type by RAILWAY_SERVICE_NAME. 'onemost-bot' runs bot, others run web server."
+  }
 }
+
