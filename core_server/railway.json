@@ -5,9 +5,8 @@
     "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic --noinput"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate && python manage.py runserver 0.0.0.0:$PORT",
+    "startCommand": "python manage.py migrate && python manage.py run_telegram_bot",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
 }
-
