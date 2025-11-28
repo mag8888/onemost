@@ -50,6 +50,18 @@ if not shared_found:
     except Exception:
         pass
 
+# В Railway /app указывает на Root Directory, добавляем его тоже
+try:
+    app_dir = '/app'
+    if app_dir not in sys.path:
+        sys.path.insert(0, app_dir)
+    # Также добавляем /app/shared если существует
+    app_shared = '/app/shared'
+    if app_shared not in sys.path:
+        sys.path.insert(0, app_shared)
+except Exception:
+    pass
+
 from shared.api_client import CoreAPIClient
 from django.conf import settings
 from .models import MLMNode, Bonus
