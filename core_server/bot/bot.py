@@ -7,6 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.error import Conflict, NetworkError, TimedOut
 from django.conf import settings
+from asgiref.sync import sync_to_async
 from users.models import User
 from wallet.models import Wallet
 from users.models import ReferralLink
@@ -66,19 +67,25 @@ class TelegramBot:
         """Обработка команды /start"""
         user = update.effective_user
         
-        # Создаем или получаем пользователя
-        db_user, created = User.objects.get_or_create(
-            telegram_id=user.id,
-            defaults={
-                'username': user.username or f"user_{user.id}",
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-            }
-        )
+        # Создаем или получаем пользователя (асинхронно)
+        @sync_to_async
+        def get_or_create_user():
+            db_user, created = User.objects.get_or_create(
+                telegram_id=user.id,
+                defaults={
+                    'username': user.username or f"user_{user.id}",
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            )
+            if created:
+                # Создаем кошелек
+                Wallet.objects.create(user=db_user)
+            return db_user, created
+        
+        db_user, created = await get_or_create_user()
         
         if created:
-            # Создаем кошелек
-            Wallet.objects.create(user=db_user)
             message = f"Добро пожаловать, {user.first_name}! Вы успешно зарегистрированы."
         else:
             message = f"С возвращением, {user.first_name}!"
@@ -110,21 +117,23 @@ class TelegramBot:
     
     async def referral_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /referral"""
-        try:
-            user = User.objects.get(telegram_id=update.effective_user.id)
-            mlm_server_id = context.args[0] if context.args else 'mlm_server_1'
-            
-            referral_link, _ = ReferralLink.objects.get_or_create(
-                user=user,
-                mlm_server_id=mlm_server_id
-            )
-            
-            message = f"🔗 Ваша реферальная ссылка:\n{referral_link.referral_code}"
-        except User.DoesNotExist:
-            message = "Пользователь не найден. Используйте /start для регистрации."
-        except Exception as e:
-            message = f"Ошибка: {str(e)}"
+        mlm_server_id = context.args[0] if context.args else 'mlm_server_1'
         
+        @sync_to_async
+        def get_referral_link():
+            try:
+                user = User.objects.get(telegram_id=update.effective_user.id)
+                referral_link, _ = ReferralLink.objects.get_or_create(
+                    user=user,
+                    mlm_server_id=mlm_server_id
+                )
+                return f"🔗 Ваша реферальная ссылка:\n{referral_link.referral_code}"
+            except User.DoesNotExist:
+                return "Пользователь не найден. Используйте /start для регистрации."
+            except Exception as e:
+                return f"Ошибка: {str(e)}"
+        
+        message = await get_referral_link()
         await update.message.reply_text(message)
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
