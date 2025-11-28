@@ -22,17 +22,22 @@ class TelegramBot:
     
     def setup(self):
         """Настройка бота"""
+        logger.info(f"Setting up bot... Token exists: {bool(self.token)}")
         if not self.token:
-            logger.warning("TELEGRAM_BOT_TOKEN not set, bot will not start")
+            logger.error("TELEGRAM_BOT_TOKEN not set, bot will not start")
+            logger.error("Please set TELEGRAM_BOT_TOKEN environment variable")
             return
         
+        logger.info("Creating Telegram application...")
         self.application = Application.builder().token(self.token).build()
         
         # Регистрация handlers
+        logger.info("Registering command handlers...")
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("balance", self.balance_command))
         self.application.add_handler(CommandHandler("referral", self.referral_command))
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
+        logger.info("Bot setup completed successfully")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /start"""
@@ -136,10 +141,21 @@ class TelegramBot:
         """Запуск бота"""
         if not self.application:
             logger.error("Bot not setup, cannot run")
+            logger.error("Check if TELEGRAM_BOT_TOKEN is set in environment variables")
             return
         
+        logger.info("=" * 50)
         logger.info("Starting Telegram bot...")
-        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+        logger.info("Bot is ready to receive messages")
+        logger.info("=" * 50)
+        try:
+            self.application.run_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
+        except Exception as e:
+            logger.error(f"Error running bot: {e}")
+            raise
 
 
 # Глобальный экземпляр бота
