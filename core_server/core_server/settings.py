@@ -164,7 +164,8 @@ TELEGRAM_WEBAPP_URL = os.getenv('TELEGRAM_WEBAPP_URL', '')
 # MLM Servers API Keys
 MLM_SERVER_API_KEYS = {
     'mlm_server_1': os.getenv('MLM_SERVER_1_API_KEY', ''),
-    'mlm_server_2': os.getenv('MLM_SERVER_2_API_KEY', ''),
+    'mlm_server_20': os.getenv('MLM_SERVER_20_API_KEY', ''),
+    'mlm_server_1000': os.getenv('MLM_SERVER_1000_API_KEY', ''),
 }
 
 # MLM Program configuration (Telegram bot + purchases)

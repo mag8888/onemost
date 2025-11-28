@@ -356,14 +356,25 @@ class TelegramBot:
     async def _notify_mlm_server(self, program_key: str, user_id: int):
         program = PROGRAMS.get(program_key)
         upgrade_url = program.get('upgrade_url')
+        mlm_server_id = program.get('mlm_server_id')
         if not upgrade_url:
             logger.warning("Upgrade URL not configured for program %s", program_key)
             return
 
+        # Получаем API ключ для MLM сервера
+        api_key = settings.MLM_SERVER_API_KEYS.get(mlm_server_id, '')
+        if not api_key:
+            logger.error("API key not found for MLM server %s", mlm_server_id)
+            return
+
         payload = {'user_id': user_id, 'program': program_key}
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        }
 
         def _post():
-            response = requests.post(upgrade_url, json=payload, timeout=20)
+            response = requests.post(upgrade_url, json=payload, headers=headers, timeout=20)
             response.raise_for_status()
             return response.json()
 
