@@ -68,8 +68,8 @@ WSGI_APPLICATION = 'core_server.wsgi.application'
 # Поддержка DATABASE_URL для Railway
 import dj_database_url
 
-# Используем DATABASE_URL если доступен, иначе используем отдельные переменные
-database_url = os.getenv('DATABASE_URL')
+# Используем DATABASE_URL если доступен, иначе DATABASE_PUBLIC_URL, иначе отдельные переменные
+database_url = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
 
 # Принудительно используем dj_database_url для Railway
 if database_url:
