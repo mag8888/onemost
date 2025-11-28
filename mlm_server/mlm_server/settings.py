@@ -72,13 +72,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mlm_server.wsgi.application'
 
-# Database - MLM сервер не хранит пользователей, только локальную структуру
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database
+# Поддержка DATABASE_URL для Railway
+import dj_database_url
+
+# Используем DATABASE_PUBLIC_URL (публичный для сервисов в разных проектах)
+database_url = os.getenv('DATABASE_PUBLIC_URL') or os.getenv('DATABASE_URL')
+
+if database_url:
+    # Railway предоставляет DATABASE_PUBLIC_URL или DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Fallback на SQLite для локальной разработки
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
