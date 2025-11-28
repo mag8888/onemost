@@ -107,18 +107,22 @@ class TelegramBot:
     
     async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /balance"""
-        try:
-            user = User.objects.get(telegram_id=update.effective_user.id)
-            wallet, _ = Wallet.objects.get_or_create(user=user)
-            
-            message = (
-                f"💰 Ваш баланс: {wallet.balance} руб.\n"
-                f"📈 Всего заработано: {wallet.total_earned} руб.\n"
-                f"💸 Всего выведено: {wallet.total_withdrawn} руб."
-            )
-        except User.DoesNotExist:
-            message = "Пользователь не найден. Используйте /start для регистрации."
+        @sync_to_async
+        def get_balance():
+            try:
+                user = User.objects.get(telegram_id=update.effective_user.id)
+                wallet, _ = Wallet.objects.get_or_create(user=user)
+                return (
+                    f"💰 Ваш баланс: {wallet.balance} руб.\n"
+                    f"📈 Всего заработано: {wallet.total_earned} руб.\n"
+                    f"💸 Всего выведено: {wallet.total_withdrawn} руб."
+                )
+            except User.DoesNotExist:
+                return "Пользователь не найден. Используйте /start для регистрации."
+            except Exception as e:
+                return f"Ошибка: {str(e)}"
         
+        message = await get_balance()
         await update.message.reply_text(message)
     
     async def referral_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
