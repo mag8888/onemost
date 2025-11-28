@@ -5,6 +5,7 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+from telegram.error import Conflict, NetworkError, TimedOut
 from django.conf import settings
 from users.models import User
 from wallet.models import Wallet
@@ -148,14 +149,39 @@ class TelegramBot:
         logger.info("Starting Telegram bot...")
         logger.info("Bot is ready to receive messages")
         logger.info("=" * 50)
+        
         try:
+            # Сначала закрываем все предыдущие соединения
+            self.application.bot.delete_webhook(drop_pending_updates=True)
+            
             self.application.run_polling(
                 allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True
+                drop_pending_updates=True,
+                close_loop=False
             )
+        except Conflict as e:
+            logger.error("=" * 50)
+            logger.error("CONFLICT: Another bot instance is running!")
+            logger.error("This usually means:")
+            logger.error("1. Bot is running locally or on another server")
+            logger.error("2. Multiple Railway instances are running")
+            logger.error("3. Previous instance didn't shut down properly")
+            logger.error(f"Error: {e}")
+            logger.error("=" * 50)
+            logger.info("Stopping this instance to avoid conflicts...")
+            # Останавливаем этот экземпляр
+            return
+        except (NetworkError, TimedOut) as e:
+            logger.warning(f"Network error: {e}. Retrying in 30 seconds...")
+            import time
+            time.sleep(30)
+            self.run()
         except Exception as e:
             logger.error(f"Error running bot: {e}")
-            raise
+            logger.error("Bot will retry in 60 seconds...")
+            import time
+            time.sleep(60)
+            self.run()
 
 
 # Глобальный экземпляр бота
