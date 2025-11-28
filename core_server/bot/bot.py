@@ -193,8 +193,11 @@ class TelegramBot:
                         mlm_server_id='mlm_server_20'
                     )
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
-                    username = user.username or f"user_{user.id}"
+                    # Используем username из Telegram, если есть, иначе используем telegram_id
+                    telegram_user = update.effective_user
+                    username = telegram_user.username or f"user_{user.id}"
                     bot_link = f"https://t.me/onemost_bot?start={username}"
+                    logger.info(f"Generated referral link for user {user.id}: {bot_link}")
                     return (
                         f"💵 Реферальная программа $20\n\n"
                         f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
@@ -203,9 +206,12 @@ class TelegramBot:
                 except User.DoesNotExist:
                     return "Пользователь не найден. Используйте /start для регистрации."
                 except Exception as e:
+                    logger.error(f"Error generating program_20 link: {e}")
                     return f"Ошибка: {str(e)}"
             
             message = await get_program_link_20()
+            await query.edit_message_text(message)
+            return
         
         elif query.data == 'program_100':
             @sync_to_async
@@ -218,8 +224,11 @@ class TelegramBot:
                         mlm_server_id='mlm_server_1'
                     )
                     # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
-                    username = user.username or f"user_{user.id}"
+                    # Используем username из Telegram, если есть, иначе используем telegram_id
+                    telegram_user = update.effective_user
+                    username = telegram_user.username or f"user_{user.id}"
                     bot_link = f"https://t.me/onemost_bot?start={username}"
+                    logger.info(f"Generated referral link for user {user.id}: {bot_link}")
                     return (
                         f"💵 Реферальная программа $100\n\n"
                         f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
@@ -228,14 +237,16 @@ class TelegramBot:
                 except User.DoesNotExist:
                     return "Пользователь не найден. Используйте /start для регистрации."
                 except Exception as e:
+                    logger.error(f"Error generating program_100 link: {e}")
                     return f"Ошибка: {str(e)}"
             
             message = await get_program_link_100()
+            await query.edit_message_text(message)
+            return
         
         else:
             message = "Функция в разработке."
-        
-        await query.edit_message_text(message)
+            await query.edit_message_text(message)
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка текстовых сообщений (кнопки нижнего меню)"""
