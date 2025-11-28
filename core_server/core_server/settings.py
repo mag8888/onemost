@@ -74,14 +74,17 @@ import re
 database_url = os.getenv('DATABASE_PUBLIC_URL') or os.getenv('DATABASE_URL')
 
 # Если DATABASE_URL содержит .railway.internal, заменяем на публичный URL
-if database_url and '.railway.internal' in database_url:
-    # Пытаемся получить публичный URL
-    public_url = os.getenv('DATABASE_PUBLIC_URL')
-    if public_url:
-        database_url = public_url
-    else:
-        # Заменяем .railway.internal на .railway.app (публичный домен)
-        database_url = database_url.replace('.railway.internal', '.railway.app')
+if database_url:
+    if '.railway.internal' in database_url:
+        # Пытаемся получить публичный URL
+        public_url = os.getenv('DATABASE_PUBLIC_URL')
+        if public_url:
+            database_url = public_url
+        else:
+            # Заменяем .railway.internal на .railway.app (публичный домен)
+            database_url = database_url.replace('.railway.internal', '.railway.app')
+            # Также заменяем в других местах URL
+            database_url = re.sub(r'@([^:]+)\.railway\.internal', r'@\1.railway.app', database_url)
 
 # Принудительно используем dj_database_url для Railway
 if database_url:
