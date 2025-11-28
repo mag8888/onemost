@@ -25,7 +25,7 @@ from telegram.ext import (
     filters,
 )
 
-from users.models import User, ReferralLink
+from users.models import User, ReferralLink, ReferralRelation
 from wallet.models import Wallet, Transaction
 
 logger = logging.getLogger(__name__)
@@ -87,18 +87,56 @@ class TelegramBot:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_text_message)
         )
+        
+        # Глобальный обработчик ошибок
+        self.application.add_error_handler(self.error_handler)
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /start"""
-        user = await self._get_or_create_user(update.effective_user)
+        try:
+            logger.info(f"Received /start command from user {update.effective_user.id}")
+            
+            # Получаем параметры команды (для реферальных ссылок)
+            args = context.args
+            referrer_username = args[0] if args else None
+            
+            # Создаём или получаем пользователя
+            user = await self._get_or_create_user(update.effective_user)
+            logger.info(f"User {user.id} created/retrieved successfully")
+            
+            # Обработка реферальной ссылки
+            if referrer_username:
+                await self._handle_referral(user, referrer_username)
+            
+            message = (
+                f"Добро пожаловать, {user.first_name or user.username}!\n\n"
+                "Используйте кнопки меню, чтобы пополнить баланс, посмотреть каталог программ "
+                "и получить реферальную ссылку."
+            )
 
-        message = (
-            f"Добро пожаловать, {user.first_name or user.username}!\n\n"
-            "Используйте кнопки меню, чтобы пополнить баланс, посмотреть каталог программ "
-            "и получить реферальную ссылку."
-        )
-
-        await update.message.reply_text(message, reply_markup=MENU_KEYBOARD)
+            # Проверяем наличие update.message
+            if update.message:
+                await update.message.reply_text(message, reply_markup=MENU_KEYBOARD)
+            elif update.effective_message:
+                await update.effective_message.reply_text(message, reply_markup=MENU_KEYBOARD)
+            else:
+                logger.error("No message or effective_message in update")
+                return
+                
+            logger.info(f"Welcome message sent to user {user.id}")
+        except Exception as e:
+            logger.error(f"Error in start_command: {e}", exc_info=True)
+            try:
+                if update.message:
+                    await update.message.reply_text(
+                        "Произошла ошибка при обработке команды. Попробуйте позже."
+                    )
+                elif update.effective_message:
+                    await update.effective_message.reply_text(
+                        "Произошла ошибка при обработке команды. Попробуйте позже."
+                    )
+            except Exception as send_error:
+                logger.error(f"Error sending error message: {send_error}")
 
     async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Команда /balance"""
@@ -324,6 +362,38 @@ class TelegramBot:
 
     @staticmethod
     @sync_to_async
+    def _handle_referral(user, referrer_username: str):
+        """Обработка реферальной ссылки при регистрации"""
+        try:
+            # Ищем реферера по username или telegram_id
+            referrer = None
+            if referrer_username.isdigit():
+                # Если это число, ищем по telegram_id
+                referrer = User.objects.filter(telegram_id=int(referrer_username)).first()
+            else:
+                # Ищем по username
+                referrer = User.objects.filter(username=referrer_username).first()
+            
+            if not referrer:
+                logger.warning(f"Referrer not found: {referrer_username}")
+                return
+            
+            # Создаём реферальную связь для всех MLM серверов
+            # (пока создаём для всех, потом можно будет выбрать конкретный)
+            mlm_servers = ['mlm_server_1', 'mlm_server_20', 'mlm_server_1000']
+            for mlm_server_id in mlm_servers:
+                ReferralRelation.objects.get_or_create(
+                    user=user,
+                    mlm_server_id=mlm_server_id,
+                    defaults={'referrer': referrer, 'level': 1}
+                )
+            
+            logger.info(f"Referral relation created: {referrer.username} -> {user.username}")
+        except Exception as e:
+            logger.error(f"Error handling referral: {e}", exc_info=True)
+
+    @staticmethod
+    @sync_to_async
     def _change_balance(user, amount: Decimal, transaction_type: str, description: str):
         wallet, _ = Wallet.objects.get_or_create(user=user)
         wallet.balance = wallet.balance + amount
@@ -383,6 +453,19 @@ class TelegramBot:
             logger.info("MLM server %s notified about user %s", program_key, user_id)
         except requests.RequestException as exc:
             logger.error("Failed to notify MLM server %s: %s", program_key, exc)
+
+    async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE):
+        """Глобальный обработчик ошибок"""
+        logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+        
+        # Попытка отправить сообщение об ошибке пользователю
+        if update and isinstance(update, Update) and update.effective_message:
+            try:
+                await update.effective_message.reply_text(
+                    "Произошла ошибка. Попробуйте позже или обратитесь в поддержку."
+                )
+            except Exception as e:
+                logger.error(f"Error sending error message to user: {e}")
 
     def run(self):
         """Запуск бота"""
