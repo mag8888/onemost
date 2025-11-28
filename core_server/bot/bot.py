@@ -3,7 +3,7 @@ Telegram бот для центрального сервера
 """
 import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from telegram.error import Conflict, NetworkError, TimedOut
 from django.conf import settings
@@ -61,11 +61,18 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("balance", self.balance_command))
         self.application.add_handler(CommandHandler("referral", self.referral_command))
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_text_message))
         logger.info("Bot setup completed successfully")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /start"""
         user = update.effective_user
+        
+        # Обработка реферальной ссылки (если есть параметр start)
+        if context.args and len(context.args) > 0:
+            referrer_username = context.args[0]
+            # Здесь можно добавить логику обработки реферала
+            logger.info(f"User {user.id} came from referral: {referrer_username}")
         
         # Создаем или получаем пользователя (асинхронно)
         @sync_to_async
@@ -176,6 +183,50 @@ class TelegramBot:
             message = "Функция в разработке."
         
         await query.edit_message_text(message)
+    
+    async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработка текстовых сообщений (кнопки нижнего меню)"""
+        text = update.message.text
+        
+        if text == "💰 Баланс":
+            @sync_to_async
+            def get_balance():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    wallet, _ = Wallet.objects.get_or_create(user=user)
+                    return (
+                        f"💰 Ваш баланс: {wallet.balance} руб.\n"
+                        f"📈 Всего заработано: {wallet.total_earned} руб.\n"
+                        f"💸 Всего выведено: {wallet.total_withdrawn} руб."
+                    )
+                except User.DoesNotExist:
+                    return "Пользователь не найден. Используйте /start для регистрации."
+                except Exception as e:
+                    return f"Ошибка: {str(e)}"
+            
+            message = await get_balance()
+            await update.message.reply_text(message)
+        
+        elif text == "📋 Каталог программ":
+            # Показываем каталог программ
+            keyboard = [
+                [InlineKeyboardButton("💵 Программа $20", callback_data='program_20')],
+                [InlineKeyboardButton("💵 Программа $100", callback_data='program_100')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "📋 Выберите реферальную программу:",
+                reply_markup=reply_markup
+            )
+        
+        else:
+            # Неизвестная команда
+            await update.message.reply_text(
+                "Используйте кнопки меню или команды:\n"
+                "/start - Начать работу\n"
+                "/balance - Баланс\n"
+                "/referral - Реферальная ссылка"
+            )
     
     def run(self):
         """Запуск бота"""
