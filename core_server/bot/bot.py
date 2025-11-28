@@ -105,8 +105,11 @@ class TelegramBot:
             logger.info(f"User {user.id} created/retrieved successfully")
             
             # Обработка реферальной ссылки
-            if referrer_username:
-                await self._handle_referral(user, referrer_username)
+            if referrer_username and referrer_username.strip():
+                try:
+                    await self._handle_referral(user, referrer_username)
+                except Exception as ref_error:
+                    logger.error(f"Error processing referral link: {ref_error}", exc_info=True)
             
             message = (
                 f"Добро пожаловать, {user.first_name or user.username}!\n\n"
@@ -364,18 +367,27 @@ class TelegramBot:
     @sync_to_async
     def _handle_referral(user, referrer_username: str):
         """Обработка реферальной ссылки при регистрации"""
+        if not referrer_username or not isinstance(referrer_username, str):
+            logger.warning(f"Invalid referrer_username: {referrer_username}")
+            return
+        
         try:
             # Ищем реферера по username или telegram_id
             referrer = None
-            if referrer_username.isdigit():
+            referrer_username_clean = referrer_username.strip()
+            
+            if referrer_username_clean.isdigit():
                 # Если это число, ищем по telegram_id
-                referrer = User.objects.filter(telegram_id=int(referrer_username)).first()
+                try:
+                    referrer = User.objects.filter(telegram_id=int(referrer_username_clean)).first()
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid telegram_id format: {referrer_username_clean}")
             else:
                 # Ищем по username
-                referrer = User.objects.filter(username=referrer_username).first()
+                referrer = User.objects.filter(username=referrer_username_clean).first()
             
             if not referrer:
-                logger.warning(f"Referrer not found: {referrer_username}")
+                logger.warning(f"Referrer not found: {referrer_username_clean}")
                 return
             
             # Создаём реферальную связь для всех MLM серверов
@@ -388,7 +400,7 @@ class TelegramBot:
                     defaults={'referrer': referrer, 'level': 1}
                 )
             
-            logger.info(f"Referral relation created: {referrer.username} -> {user.username}")
+            logger.info(f"Referral relation created: {referrer.username or referrer.id} -> {user.username or user.id}")
         except Exception as e:
             logger.error(f"Error handling referral: {e}", exc_info=True)
 
