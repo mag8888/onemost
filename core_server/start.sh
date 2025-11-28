@@ -1,16 +1,16 @@
 #!/bin/bash
 # Универсальный скрипт запуска для Railway
-# Определяет, какой сервис запускать, по переменной окружения RAILWAY_SERVICE_NAME
+# Определяет, какой сервис запускать, по переменной окружения SERVICE_TYPE
 
-# Получаем имя сервиса из переменной окружения Railway
-SERVICE_NAME=${RAILWAY_SERVICE_NAME:-"onemost"}
+# Проверяем переменную SERVICE_TYPE (устанавливается в Railway для каждого сервиса)
+SERVICE_TYPE=${SERVICE_TYPE:-"web"}
 
 echo "=========================================="
-echo "Starting service: $SERVICE_NAME"
+echo "Service type: $SERVICE_TYPE"
 echo "=========================================="
 
 # Определяем, какой сервис запускать
-if [ "$SERVICE_NAME" = "onemost-bot" ] || [ "$SERVICE_NAME" = "onemost-bot-production" ]; then
+if [ "$SERVICE_TYPE" = "bot" ]; then
     echo "Starting Telegram bot..."
     python manage.py run_telegram_bot
 else
