@@ -32,6 +32,20 @@ class TelegramBot:
         logger.info("Creating Telegram application...")
         self.application = Application.builder().token(self.token).build()
         
+        # Добавляем обработчик ошибок
+        async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+            """Обработчик ошибок"""
+            logger.error(f"Exception while handling an update: {context.error}")
+            if isinstance(context.error, Conflict):
+                logger.error("CONFLICT detected in error handler!")
+                logger.error("Stopping bot to avoid conflicts...")
+                await self.application.stop()
+                await self.application.shutdown()
+                import sys
+                sys.exit(0)
+        
+        self.application.add_error_handler(error_handler)
+        
         # Регистрация handlers
         logger.info("Registering command handlers...")
         self.application.add_handler(CommandHandler("start", self.start_command))
@@ -151,6 +165,18 @@ class TelegramBot:
         logger.info("=" * 50)
         
         try:
+            # Инициализируем бота перед polling
+            async def post_init(app: Application) -> None:
+                """Выполняется после инициализации"""
+                logger.info("Bot initialized successfully")
+            
+            async def post_shutdown(app: Application) -> None:
+                """Выполняется при остановке"""
+                logger.info("Bot is shutting down...")
+            
+            self.application.post_init = post_init
+            self.application.post_shutdown = post_shutdown
+            
             self.application.run_polling(
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True,
@@ -178,6 +204,8 @@ class TelegramBot:
             import time
             time.sleep(30)
             self.run()
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
         except Exception as e:
             logger.error(f"Error running bot: {e}")
             logger.error("Bot will retry in 60 seconds...")
