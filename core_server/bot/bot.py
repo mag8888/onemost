@@ -12,7 +12,8 @@ from django.conf import settings
 from asgiref.sync import sync_to_async
 from users.models import User
 from wallet.models import Wallet
-from users.models import ReferralLink
+from users.models import ReferralLink, ReferralRelation
+from telegram.error import TelegramError
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,6 @@ class TelegramBot:
             referrer = await find_referrer()
             if referrer:
                 logger.info(f"Found referrer: {referrer.id} for new user {user.id}")
-                # Здесь можно добавить логику создания реферальной связи
         
         # Создаем или получаем пользователя (асинхронно)
         @sync_to_async
@@ -112,6 +112,56 @@ class TelegramBot:
             return db_user, created
         
         db_user, created = await get_or_create_user()
+        
+        # Создаем реферальную связь, если есть реферер и это новый пользователь
+        if referrer and referrer.id != db_user.id:
+            @sync_to_async
+            def create_referral_relation():
+                # Создаем реферальную связь для всех MLM серверов
+                for mlm_server_id in ['mlm_server_1', 'mlm_server_20']:
+                    ReferralRelation.objects.get_or_create(
+                        user=db_user,
+                        referrer=referrer,
+                        mlm_server_id=mlm_server_id,
+                        defaults={'level': 1}
+                    )
+                logger.info(f"Referral relation created: {db_user.username} referred by {referrer.username}")
+            
+            await create_referral_relation()
+            
+            # Отправляем поздравление рефереру
+            @sync_to_async
+            def prepare_congratulations():
+                try:
+                    # Формируем информацию о новом пользователе
+                    if user.username:
+                        new_user_info = user.username
+                    elif user.first_name or user.last_name:
+                        new_user_info = f"{user.first_name or ''} {user.last_name or ''}".strip()
+                    else:
+                        new_user_info = f"ID: {user.id}"
+                    
+                    congratulation_message = (
+                        f"🎉 Поздравляю!\n\n"
+                        f"По вашей ссылке подключился: {new_user_info}"
+                    )
+                    
+                    return referrer.telegram_id, congratulation_message
+                except Exception as e:
+                    logger.error(f"Error preparing congratulations: {e}")
+                    return None, None
+            
+            referrer_telegram_id, congratulation_message = await prepare_congratulations()
+            
+            if referrer_telegram_id and congratulation_message:
+                try:
+                    await context.bot.send_message(
+                        chat_id=referrer_telegram_id,
+                        text=congratulation_message
+                    )
+                    logger.info(f"Congratulations sent to referrer {referrer_telegram_id}")
+                except TelegramError as e:
+                    logger.error(f"Error sending congratulations to referrer {referrer_telegram_id}: {e}")
         
         if created:
             message = f"Добро пожаловать, {user.first_name}! Вы успешно зарегистрированы."
