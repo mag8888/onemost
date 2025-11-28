@@ -97,12 +97,11 @@ class TelegramBot:
         else:
             message = f"С возвращением, {user.first_name}!"
         
-        keyboard = [
-            [InlineKeyboardButton("💰 Баланс", callback_data='balance')],
-            [InlineKeyboardButton("🔗 Реферальная ссылка", callback_data='referral')],
-            [InlineKeyboardButton("📊 Статистика", callback_data='stats')],
+        # Нижнее меню (ReplyKeyboardMarkup)
+        menu_keyboard = [
+            [KeyboardButton("💰 Баланс"), KeyboardButton("📋 Каталог программ")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True)
         
         await update.message.reply_text(message, reply_markup=reply_markup)
     
@@ -178,6 +177,56 @@ class TelegramBot:
                     return "Пользователь не найден."
             
             message = await get_referral_link()
+        
+        elif query.data == 'program_20':
+            @sync_to_async
+            def get_program_link_20():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    # Получаем или создаем реферальную ссылку для программы $20
+                    referral_link, _ = ReferralLink.objects.get_or_create(
+                        user=user,
+                        mlm_server_id='mlm_server_20'
+                    )
+                    # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
+                    username = user.username or f"user_{user.id}"
+                    bot_link = f"https://t.me/onemost_bot?start={username}"
+                    return (
+                        f"💵 Реферальная программа $20\n\n"
+                        f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
+                        f"При регистрации по вашей ссылке вы получите бонусы!"
+                    )
+                except User.DoesNotExist:
+                    return "Пользователь не найден. Используйте /start для регистрации."
+                except Exception as e:
+                    return f"Ошибка: {str(e)}"
+            
+            message = await get_program_link_20()
+        
+        elif query.data == 'program_100':
+            @sync_to_async
+            def get_program_link_100():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    # Получаем или создаем реферальную ссылку для программы $100
+                    referral_link, _ = ReferralLink.objects.get_or_create(
+                        user=user,
+                        mlm_server_id='mlm_server_1'
+                    )
+                    # Формируем ссылку в формате: https://t.me/onemost_bot?start=username
+                    username = user.username or f"user_{user.id}"
+                    bot_link = f"https://t.me/onemost_bot?start={username}"
+                    return (
+                        f"💵 Реферальная программа $100\n\n"
+                        f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
+                        f"При регистрации по вашей ссылке вы получите бонусы!"
+                    )
+                except User.DoesNotExist:
+                    return "Пользователь не найден. Используйте /start для регистрации."
+                except Exception as e:
+                    return f"Ошибка: {str(e)}"
+            
+            message = await get_program_link_100()
         
         else:
             message = "Функция в разработке."
