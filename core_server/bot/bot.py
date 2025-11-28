@@ -345,16 +345,28 @@ class TelegramBot:
             )
         
         elif text == "🔗 Реф программа":
-            # Показываем меню выбора реферальной программы
-            keyboard = [
-                [InlineKeyboardButton("💵 Программа $20", callback_data='program_20')],
-                [InlineKeyboardButton("💵 Программа $100", callback_data='program_100')],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                "🔗 Выберите реферальную программу для получения ссылки:",
-                reply_markup=reply_markup
-            )
+            # Показываем единую реферальную ссылку
+            @sync_to_async
+            def get_unified_referral_link():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    # Формируем единую ссылку в формате: https://t.me/onemost_bot?start=username
+                    telegram_user = update.effective_user
+                    username = telegram_user.username or str(user.telegram_id)
+                    bot_link = f"https://t.me/onemost_bot?start={username}"
+                    return (
+                        f"🔗 Ваша единая реф ссылка:\n\n"
+                        f"{bot_link}\n\n"
+                        f"Эта ссылка работает для всех программ!"
+                    )
+                except User.DoesNotExist:
+                    return "Пользователь не найден. Используйте /start для регистрации."
+                except Exception as e:
+                    logger.error(f"Error getting unified referral link: {e}")
+                    return f"Ошибка: {str(e)}"
+            
+            message = await get_unified_referral_link()
+            await update.message.reply_text(message)
         
         else:
             # Неизвестная команда
