@@ -5,10 +5,12 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+from telegram.error import TelegramError
 from django.conf import settings
+from asgiref.sync import sync_to_async
 from users.models import User
 from wallet.models import Wallet
-from users.models import ReferralLink
+from users.models import ReferralLink, ReferralRelation
 
 logger = logging.getLogger(__name__)
 
@@ -37,20 +39,99 @@ class TelegramBot:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /start"""
         user = update.effective_user
+        referrer_user = None
+        
+        # Обработка реферальной ссылки (если есть параметр start)
+        if context.args and len(context.args) > 0:
+            referrer_identifier = context.args[0]
+            logger.info(f"User {user.id} came from referral: {referrer_identifier}")
+            
+            # Ищем реферера по username или telegram_id
+            @sync_to_async
+            def find_referrer():
+                referrer = None
+                # Пытаемся найти по telegram_id (если передан ID)
+                if referrer_identifier.isdigit():
+                    try:
+                        referrer = User.objects.get(telegram_id=int(referrer_identifier))
+                    except User.DoesNotExist:
+                        pass
+                else:
+                    # Ищем по username
+                    try:
+                        referrer = User.objects.get(username=referrer_identifier)
+                    except User.DoesNotExist:
+                        # Если не найден по username, пробуем найти по telegram_id из username
+                        pass
+                return referrer
+            
+            referrer_user = await find_referrer()
         
         # Создаем или получаем пользователя
-        db_user, created = User.objects.get_or_create(
-            telegram_id=user.id,
-            defaults={
-                'username': user.username or f"user_{user.id}",
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-            }
-        )
+        @sync_to_async
+        def get_or_create_user():
+            db_user, created = User.objects.get_or_create(
+                telegram_id=user.id,
+                defaults={
+                    'username': user.username or f"user_{user.id}",
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            )
+            if created:
+                # Создаем кошелек
+                Wallet.objects.create(user=db_user)
+            return db_user, created
+        
+        db_user, created = await get_or_create_user()
+        
+        # Создаем реферальную связь, если есть реферер
+        if referrer_user and referrer_user.id != db_user.id:
+            @sync_to_async
+            def create_referral_relation():
+                # Создаем реферальную связь для всех MLM серверов
+                for mlm_server_id in ['mlm_server_1', 'mlm_server_20']:
+                    ReferralRelation.objects.get_or_create(
+                        user=db_user,
+                        referrer=referrer_user,
+                        mlm_server_id=mlm_server_id,
+                        defaults={'level': 1}
+                    )
+                logger.info(f"Referral relation created: {db_user.username} referred by {referrer_user.username}")
+            
+            await create_referral_relation()
+            
+            # Отправляем поздравление рефереру
+            @sync_to_async
+            def send_congratulations():
+                try:
+                    # Формируем информацию о новом пользователе
+                    new_user_info = user.username if user.username else f"{user.first_name or ''} {user.last_name or ''}".strip() or f"ID: {user.id}"
+                    
+                    congratulation_message = (
+                        f"🎉 Поздравляю!\n\n"
+                        f"По вашей ссылке подключился: {new_user_info}"
+                    )
+                    
+                    # Отправляем сообщение рефереру
+                    return referrer_user.telegram_id, congratulation_message
+                except Exception as e:
+                    logger.error(f"Error preparing congratulations: {e}")
+                    return None, None
+            
+            referrer_telegram_id, congratulation_message = await send_congratulations()
+            
+            if referrer_telegram_id and congratulation_message:
+                try:
+                    await context.bot.send_message(
+                        chat_id=referrer_telegram_id,
+                        text=congratulation_message
+                    )
+                    logger.info(f"Congratulations sent to referrer {referrer_telegram_id}")
+                except TelegramError as e:
+                    logger.error(f"Error sending congratulations to referrer {referrer_telegram_id}: {e}")
         
         if created:
-            # Создаем кошелек
-            Wallet.objects.create(user=db_user)
             message = f"Добро пожаловать, {user.first_name}! Вы успешно зарегистрированы."
         else:
             message = f"С возвращением, {user.first_name}!"
