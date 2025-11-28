@@ -37,12 +37,20 @@ class TelegramBot:
             """Обработчик ошибок"""
             logger.error(f"Exception while handling an update: {context.error}")
             if isinstance(context.error, Conflict):
-                logger.error("CONFLICT detected in error handler!")
-                logger.error("Stopping bot to avoid conflicts...")
-                await self.application.stop()
-                await self.application.shutdown()
+                logger.error("=" * 50)
+                logger.error("CRITICAL: CONFLICT detected!")
+                logger.error("Another bot instance is running with the same token!")
+                logger.error("=" * 50)
+                logger.error("Please check:")
+                logger.error("1. Other Railway services using the same token")
+                logger.error("2. Old containers that didn't shut down")
+                logger.error("3. Local bot instances")
+                logger.error("4. Other Railway projects")
+                logger.error("=" * 50)
+                # Не пытаемся остановить бота - просто логируем и выходим
                 import sys
-                sys.exit(0)
+                import os
+                os._exit(1)  # Принудительный выход
         
         self.application.add_error_handler(error_handler)
         
@@ -184,21 +192,20 @@ class TelegramBot:
             )
         except Conflict as e:
             logger.error("=" * 50)
-            logger.error("CONFLICT: Another bot instance is running!")
-            logger.error("This usually means:")
-            logger.error("1. Bot is running locally or on another server")
-            logger.error("2. Multiple Railway instances are running")
-            logger.error("3. Previous instance didn't shut down properly")
+            logger.error("CRITICAL: CONFLICT detected during startup!")
+            logger.error("Another bot instance is running with the same token!")
             logger.error(f"Error: {e}")
             logger.error("=" * 50)
-            logger.info("Stopping this instance to avoid conflicts...")
-            logger.info("Please check:")
-            logger.info("- Only 1 replica should be running in Railway")
-            logger.info("- Stop any local bot instances")
-            logger.info("- Wait 30 seconds and restart this service")
-            # Останавливаем этот экземпляр
+            logger.error("SOLUTION:")
+            logger.error("1. Check ALL Railway services - stop any other bot instances")
+            logger.error("2. Check ALL Railway projects - ensure no duplicate bots")
+            logger.error("3. Wait 2-3 minutes after stopping other instances")
+            logger.error("4. Restart this service")
+            logger.error("=" * 50)
+            # Принудительный выход
             import sys
-            sys.exit(0)
+            import os
+            os._exit(1)
         except (NetworkError, TimedOut) as e:
             logger.warning(f"Network error: {e}. Retrying in 30 seconds...")
             import time
