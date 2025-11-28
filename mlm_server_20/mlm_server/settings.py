@@ -9,45 +9,22 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # shared теперь скопирован внутрь mlm_server_20, поэтому ищем его там
-# Список возможных путей к shared
-possible_paths = [
-    BASE_DIR / 'shared',  # Если shared скопирован в mlm_server_20 (текущий случай)
-    BASE_DIR.parent / 'shared',  # Если Root Directory = корень проекта
-    Path('/app') / 'shared',  # Railway: если Root Directory = mlm_server_20
-    Path('/app') / '..' / 'shared',  # Railway: если Root Directory = корень
+# Добавляем все возможные пути в sys.path (без проверки существования)
+# Python сам проверит при импорте
+paths_to_add = [
+    str(BASE_DIR / 'shared'),  # Если shared скопирован в mlm_server_20 (текущий случай)
+    str(BASE_DIR.parent / 'shared'),  # Если Root Directory = корень проекта
+    '/app/shared',  # Railway: если Root Directory = mlm_server_20
+    '/app/../shared',  # Railway: если Root Directory = корень
+    str(BASE_DIR),  # Текущая директория
+    str(BASE_DIR.parent),  # Родительская директория
+    '/app',  # Railway root
 ]
 
-# Добавляем все возможные пути в sys.path
-shared_found = False
-for shared_path in possible_paths:
-    try:
-        if shared_path.exists() and shared_path.is_dir():
-            shared_str = str(shared_path.resolve())
-            if shared_str not in sys.path:
-                sys.path.insert(0, shared_str)
-                shared_found = True
-                break
-    except Exception:
-        pass
-    
-    # Также добавляем родительскую директорию для поиска
-    try:
-        parent = shared_path.parent
-        if parent.exists() and str(parent.resolve()) not in sys.path:
-            sys.path.insert(0, str(parent.resolve()))
-    except Exception:
-        pass
-
-# Если все еще не найден, добавляем текущую директорию и родительскую
-if not shared_found:
-    if str(BASE_DIR.resolve()) not in sys.path:
-        sys.path.insert(0, str(BASE_DIR.resolve()))
-    try:
-        parent_dir = str(BASE_DIR.parent.resolve())
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-    except Exception:
-        pass
+# Добавляем пути в sys.path
+for path_str in paths_to_add:
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mlm-server-key')
