@@ -151,6 +151,8 @@ class TelegramBot:
         query = update.callback_query
         await query.answer()
         
+        logger.info(f"Button callback received: {query.data}")
+        
         if query.data == 'balance':
             @sync_to_async
             def get_balance():
@@ -183,6 +185,7 @@ class TelegramBot:
             message = await get_referral_link()
         
         elif query.data == 'program_20':
+            logger.info("Processing program_20 callback")
             @sync_to_async
             def get_program_link_20():
                 try:
@@ -197,23 +200,33 @@ class TelegramBot:
                     telegram_user = update.effective_user
                     username = telegram_user.username or f"user_{user.id}"
                     bot_link = f"https://t.me/onemost_bot?start={username}"
-                    logger.info(f"Generated referral link for user {user.id}: {bot_link}")
-                    return (
+                    logger.info(f"Generated referral link for user {user.id} (program $20): {bot_link}")
+                    message_text = (
                         f"💵 Реферальная программа $20\n\n"
                         f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
                         f"При регистрации по вашей ссылке вы получите бонусы!"
                     )
+                    logger.info(f"Message text: {message_text[:100]}...")
+                    return message_text
                 except User.DoesNotExist:
+                    logger.error("User not found for program_20")
                     return "Пользователь не найден. Используйте /start для регистрации."
                 except Exception as e:
-                    logger.error(f"Error generating program_20 link: {e}")
+                    logger.error(f"Error generating program_20 link: {e}", exc_info=True)
                     return f"Ошибка: {str(e)}"
             
-            message = await get_program_link_20()
-            await query.edit_message_text(message)
+            try:
+                message = await get_program_link_20()
+                logger.info(f"Sending message for program_20: {message[:100]}...")
+                await query.edit_message_text(message)
+                logger.info("Message sent successfully for program_20")
+            except Exception as e:
+                logger.error(f"Error sending message for program_20: {e}", exc_info=True)
+                await query.edit_message_text(f"Ошибка при генерации ссылки: {str(e)}")
             return
         
         elif query.data == 'program_100':
+            logger.info("Processing program_100 callback")
             @sync_to_async
             def get_program_link_100():
                 try:
@@ -228,20 +241,29 @@ class TelegramBot:
                     telegram_user = update.effective_user
                     username = telegram_user.username or f"user_{user.id}"
                     bot_link = f"https://t.me/onemost_bot?start={username}"
-                    logger.info(f"Generated referral link for user {user.id}: {bot_link}")
-                    return (
+                    logger.info(f"Generated referral link for user {user.id} (program $100): {bot_link}")
+                    message_text = (
                         f"💵 Реферальная программа $100\n\n"
                         f"🔗 Ваша реферальная ссылка:\n{bot_link}\n\n"
                         f"При регистрации по вашей ссылке вы получите бонусы!"
                     )
+                    logger.info(f"Message text: {message_text[:100]}...")
+                    return message_text
                 except User.DoesNotExist:
+                    logger.error("User not found for program_100")
                     return "Пользователь не найден. Используйте /start для регистрации."
                 except Exception as e:
-                    logger.error(f"Error generating program_100 link: {e}")
+                    logger.error(f"Error generating program_100 link: {e}", exc_info=True)
                     return f"Ошибка: {str(e)}"
             
-            message = await get_program_link_100()
-            await query.edit_message_text(message)
+            try:
+                message = await get_program_link_100()
+                logger.info(f"Sending message for program_100: {message[:100]}...")
+                await query.edit_message_text(message)
+                logger.info("Message sent successfully for program_100")
+            except Exception as e:
+                logger.error(f"Error sending message for program_100: {e}", exc_info=True)
+                await query.edit_message_text(f"Ошибка при генерации ссылки: {str(e)}")
             return
         
         else:
