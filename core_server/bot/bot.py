@@ -142,27 +142,35 @@ class TelegramBot:
         await query.answer()
         
         if query.data == 'balance':
-            try:
-                user = User.objects.get(telegram_id=update.effective_user.id)
-                wallet, _ = Wallet.objects.get_or_create(user=user)
-                message = (
-                    f"💰 Ваш баланс: {wallet.balance} руб.\n"
-                    f"📈 Всего заработано: {wallet.total_earned} руб.\n"
-                    f"💸 Всего выведено: {wallet.total_withdrawn} руб."
-                )
-            except User.DoesNotExist:
-                message = "Пользователь не найден."
+            @sync_to_async
+            def get_balance():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    wallet, _ = Wallet.objects.get_or_create(user=user)
+                    return (
+                        f"💰 Ваш баланс: {wallet.balance} руб.\n"
+                        f"📈 Всего заработано: {wallet.total_earned} руб.\n"
+                        f"💸 Всего выведено: {wallet.total_withdrawn} руб."
+                    )
+                except User.DoesNotExist:
+                    return "Пользователь не найден."
+            
+            message = await get_balance()
         
         elif query.data == 'referral':
-            try:
-                user = User.objects.get(telegram_id=update.effective_user.id)
-                referral_link, _ = ReferralLink.objects.get_or_create(
-                    user=user,
-                    mlm_server_id='mlm_server_1'
-                )
-                message = f"🔗 Ваша реферальная ссылка:\n{referral_link.referral_code}"
-            except User.DoesNotExist:
-                message = "Пользователь не найден."
+            @sync_to_async
+            def get_referral_link():
+                try:
+                    user = User.objects.get(telegram_id=update.effective_user.id)
+                    referral_link, _ = ReferralLink.objects.get_or_create(
+                        user=user,
+                        mlm_server_id='mlm_server_1'
+                    )
+                    return f"🔗 Ваша реферальная ссылка:\n{referral_link.referral_code}"
+                except User.DoesNotExist:
+                    return "Пользователь не найден."
+            
+            message = await get_referral_link()
         
         else:
             message = "Функция в разработке."
