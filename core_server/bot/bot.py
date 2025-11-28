@@ -151,9 +151,6 @@ class TelegramBot:
         logger.info("=" * 50)
         
         try:
-            # Сначала закрываем все предыдущие соединения
-            self.application.bot.delete_webhook(drop_pending_updates=True)
-            
             self.application.run_polling(
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True,
@@ -169,8 +166,13 @@ class TelegramBot:
             logger.error(f"Error: {e}")
             logger.error("=" * 50)
             logger.info("Stopping this instance to avoid conflicts...")
+            logger.info("Please check:")
+            logger.info("- Only 1 replica should be running in Railway")
+            logger.info("- Stop any local bot instances")
+            logger.info("- Wait 30 seconds and restart this service")
             # Останавливаем этот экземпляр
-            return
+            import sys
+            sys.exit(0)
         except (NetworkError, TimedOut) as e:
             logger.warning(f"Network error: {e}. Retrying in 30 seconds...")
             import time
