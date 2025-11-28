@@ -10,24 +10,51 @@ from pathlib import Path
 # shared теперь скопирован внутрь mlm_server_20, поэтому ищем его там
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Добавляем все возможные пути в sys.path (без проверки существования)
-# Python сам проверит при импорте
-paths_to_add = [
-    str(BASE_DIR / 'shared'),  # Если shared скопирован в mlm_server_20 (текущий случай)
-    str(BASE_DIR.parent / 'shared'),  # Если Root Directory = корень проекта
+# Добавляем все возможные пути в sys.path (используем resolve() для абсолютных путей)
+paths_to_add = []
+try:
+    # Пытаемся получить абсолютные пути
+    paths_to_add.extend([
+        str((BASE_DIR / 'shared').resolve()),  # Если shared скопирован в mlm_server_20
+        str((BASE_DIR.parent / 'shared').resolve()),  # Если Root Directory = корень проекта
+        str(BASE_DIR.resolve()),  # Текущая директория
+        str(BASE_DIR.parent.resolve()),  # Родительская директория
+    ])
+except Exception:
+    # Если resolve() не работает, используем строковые пути
+    paths_to_add.extend([
+        str(BASE_DIR / 'shared'),
+        str(BASE_DIR.parent / 'shared'),
+        str(BASE_DIR),
+        str(BASE_DIR.parent),
+    ])
+
+# Добавляем Railway пути
+paths_to_add.extend([
     '/app/shared',  # Railway: если Root Directory = mlm_server_20
-    '/app/../shared',  # Railway: если Root Directory = корень
-    str(BASE_DIR),  # Текущая директория
-    str(BASE_DIR.parent),  # Родительская директория
     '/app',  # Railway root
-]
+])
 
-# Добавляем пути в sys.path
+# Добавляем пути в sys.path (убираем дубликаты)
+seen = set()
 for path_str in paths_to_add:
-    if path_str not in sys.path:
-        sys.path.insert(0, path_str)
+    if path_str and path_str not in seen:
+        seen.add(path_str)
+        if path_str not in sys.path:
+            sys.path.insert(0, path_str)
 
-from shared.api_client import CoreAPIClient
+# Пытаемся импортировать shared
+try:
+    from shared.api_client import CoreAPIClient
+except ImportError as e:
+    # Если импорт не удался, выводим информацию для отладки
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Failed to import shared.api_client: {e}")
+    logger.error(f"sys.path: {sys.path[:10]}")  # Первые 10 путей
+    logger.error(f"BASE_DIR: {BASE_DIR}")
+    logger.error(f"BASE_DIR/shared exists: {(BASE_DIR / 'shared').exists()}")
+    raise
 from django.conf import settings
 from .models import MLMNode, Bonus
 from decimal import Decimal
