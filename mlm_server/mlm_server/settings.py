@@ -7,19 +7,30 @@ from pathlib import Path
 
 # Добавляем shared в путь
 BASE_DIR = Path(__file__).resolve().parent.parent
-# Пытаемся найти shared на уровень выше (если Root Directory = mlm_server)
-SHARED_DIR = BASE_DIR.parent / 'shared'
-# Если не найден, пытаемся найти в текущей директории (если Root Directory = корень проекта)
-if not SHARED_DIR.exists():
-    SHARED_DIR = BASE_DIR / 'shared'
-# Если все еще не найден, пытаемся найти в родительской директории от BASE_DIR
-if not SHARED_DIR.exists():
-    SHARED_DIR = BASE_DIR.parent.parent / 'shared'
-if SHARED_DIR.exists():
-    sys.path.insert(0, str(SHARED_DIR))
-else:
-    # Если shared не найден, пытаемся добавить родительскую директорию
-    sys.path.insert(0, str(BASE_DIR.parent))
+
+# Список возможных путей к shared
+possible_paths = [
+    BASE_DIR / 'shared',  # Если Root Directory = корень проекта
+    BASE_DIR.parent / 'shared',  # Если Root Directory = mlm_server
+    Path('/app') / 'shared',  # Railway: если Root Directory = корень
+    Path('/app') / '..' / 'shared',  # Railway: если Root Directory = mlm_server
+]
+
+# Добавляем все возможные пути в sys.path
+for shared_path in possible_paths:
+    if shared_path.exists() and shared_path.is_dir():
+        shared_str = str(shared_path.resolve())
+        if shared_str not in sys.path:
+            sys.path.insert(0, shared_str)
+            break
+    # Также добавляем родительскую директорию для поиска
+    parent = shared_path.parent
+    if parent.exists() and str(parent.resolve()) not in sys.path:
+        sys.path.insert(0, str(parent.resolve()))
+
+# Если все еще не найден, добавляем родительскую директорию BASE_DIR
+if str(BASE_DIR.parent.resolve()) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR.parent.resolve()))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mlm-server-key')
