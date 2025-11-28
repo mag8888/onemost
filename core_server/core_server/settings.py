@@ -70,7 +70,10 @@ import dj_database_url
 
 # Используем DATABASE_URL если доступен, иначе используем отдельные переменные
 database_url = os.getenv('DATABASE_URL')
+
+# Принудительно используем dj_database_url для Railway
 if database_url:
+    # Railway предоставляет DATABASE_URL
     DATABASES = {
         'default': dj_database_url.config(
             default=database_url,
@@ -80,6 +83,7 @@ if database_url:
     }
 else:
     # Fallback на отдельные переменные (для локальной разработки)
+    # НО если в Railway, то DATABASE_URL должен быть всегда
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -90,6 +94,12 @@ else:
             'PORT': os.getenv('DATABASE_PORT', '5432'),
         }
     }
+    
+    # В Railway DATABASE_URL должен быть всегда установлен
+    # Если его нет, выводим предупреждение
+    if os.getenv('RAILWAY_ENVIRONMENT'):
+        import warnings
+        warnings.warn('DATABASE_URL not found in Railway environment!')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
