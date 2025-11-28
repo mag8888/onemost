@@ -7,16 +7,15 @@ from pathlib import Path
 
 # Добавляем shared в путь
 # В Railway, если Root Directory = mlm_server, то /app = mlm_server
-# shared находится на уровень выше: /app/../shared
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# shared теперь скопирован внутрь mlm_server, поэтому ищем его там
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Список возможных путей к shared
 possible_paths = [
-    BASE_DIR / 'shared',  # Если Root Directory = корень проекта
-    BASE_DIR.parent / 'shared',  # Если Root Directory = mlm_server
-    Path('/app') / 'shared',  # Railway: если Root Directory = корень
-    Path('/app') / '..' / 'shared',  # Railway: если Root Directory = mlm_server
-    Path(__file__).resolve().parent.parent.parent.parent / 'shared',  # Альтернативный путь
+    BASE_DIR / 'shared',  # Если shared скопирован в mlm_server (текущий случай)
+    BASE_DIR.parent / 'shared',  # Если Root Directory = корень проекта
+    Path('/app') / 'shared',  # Railway: если Root Directory = mlm_server
+    Path('/app') / '..' / 'shared',  # Railway: если Root Directory = корень
 ]
 
 # Добавляем все возможные пути в sys.path
@@ -31,9 +30,9 @@ for shared_path in possible_paths:
     if parent.exists() and str(parent.resolve()) not in sys.path:
         sys.path.insert(0, str(parent.resolve()))
 
-# Если все еще не найден, добавляем родительскую директорию BASE_DIR
-if str(BASE_DIR.parent.resolve()) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR.parent.resolve()))
+# Если все еще не найден, добавляем текущую директорию
+if str(BASE_DIR.resolve()) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR.resolve()))
 
 from shared.api_client import CoreAPIClient
 from django.conf import settings
